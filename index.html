@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+        }
+
+        .container {
+            max-width: 90%;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .app-title {
+            text-align: center;
+            margin-bottom: 20px;
+            color: var(--tg-theme-button-color, #007bff);
+        }
+
+        .weather-widget {
+            background-color: var(--tg-theme-secondary-bg-color, #f8f9fa);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .weather-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .weather-main {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            width: 100%;
+        }
+
+        .weather-temp {
+            font-size: 42px;
+            font-weight: bold;
+            margin-right: 20px;
+        }
+
+        .weather-icon {
+            font-size: 48px;
+        }
+
+        .weather-description {
+            text-align: center;
+            margin-bottom: 16px;
+            font-size: 18px;
+        }
+
+        .weather-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .weather-detail {
+            background-color: var(--tg-theme-bg-color, #ffffff);
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .detail-label {
+            font-size: 12px;
+            color: var(--tg-theme-hint-color, #6c757d);
+            margin-bottom: 4px;
+        }
+
+        .detail-value {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .search-box {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            background-color: var(--tg-theme-secondary-bg-color, #f8f9fa);
+            color: var(--tg-theme-text-color, #000000);
+            border-radius: 8px 0 0 8px;
+            font-size: 16px;
+        }
+
+        .search-button {
+            padding: 10px 16px;
+            border: none;
+            background-color: var(--tg-theme-button-color, #007bff);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border-radius: 0 8px 8px 0;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: var(--tg-theme-hint-color, #6c757d);
+        }
+
+        .error {
+            text-align: center;
+            padding: 16px;
+            background-color: #ffebee;
+            color: #d32f2f;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .weather-forecast {
+            display: flex;
+            overflow-x: auto;
+            padding: 10px 0;
+            margin-top: 20px;
+            gap: 12px;
+        }
+
+        .forecast-item {
+            min-width: 80px;
+            background-color: var(--tg-theme-bg-color, #ffffff);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .forecast-day {
+            font-size: 12px;
+            margin-bottom: 6px;
+            color: var(--tg-theme-hint-color, #6c757d);
+        }
+
+        .forecast-icon {
+            font-size: 24px;
+            margin-bottom: 6px;
+        }
+
+        .forecast-temp {
+            font-size: 14px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="app-title">Weather Mini App</h1>
+
+        <div class="search-box">
+            <input type="text" class="search-input" id="cityInput" placeholder="Enter city name...">
+            <button class="search-button" id="searchBtn">Search</button>
+        </div>
+
+        <div id="errorContainer" style="display: none;" class="error"></div>
+
+        <div id="loadingContainer" class="loading">
+            Loading weather data...
+        </div>
+
+        <div id="weatherContainer" style="display: none;">
+            <div class="weather-widget">
+                <div class="weather-info">
+                    <div class="weather-main">
+                        <div class="weather-temp" id="temperature">--°C</div>
+                        <div class="weather-icon" id="weatherIcon">⛅</div>
+                    </div>
+                    <div class="weather-description" id="weatherDescription">--</div>
+                    <div class="weather-details">
+                        <div class="weather-detail">
+                            <div class="detail-label">Humidity</div>
+                            <div class="detail-value" id="humidity">--%</div>
+                        </div>
+                        <div class="weather-detail">
+                            <div class="detail-label">Wind</div>
+                            <div class="detail-value" id="wind">-- km/h</div>
+                        </div>
+                        <div class="weather-detail">
+                            <div class="detail-label">Feels Like</div>
+                            <div class="detail-value" id="feelsLike">--°C</div>
+                        </div>
+                        <div class="weather-detail">
+                            <div class="detail-label">Pressure</div>
+                            <div class="detail-value" id="pressure">-- hPa</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="weather-forecast" id="forecast">
+                <!-- Forecast items will be added here dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        // Weather API configuration (using OpenWeatherMap API)
+        const API_KEY = "840dd6784022126d5d74486fdd2ca2d4"; // Replace with your API key
+        const API_URL = "https://api.openweathermap.org/data/2.5/weather";
+        const FORECAST_API_URL = "https://api.openweathermap.org/data/2.5/forecast";
+
+        // DOM elements
+        const cityInput = document.getElementById("cityInput");
+        const searchBtn = document.getElementById("searchBtn");
+        const weatherContainer = document.getElementById("weatherContainer");
+        const loadingContainer = document.getElementById("loadingContainer");
+        const errorContainer = document.getElementById("errorContainer");
+        const temperatureEl = document.getElementById("temperature");
+        const weatherIconEl = document.getElementById("weatherIcon");
+        const weatherDescriptionEl = document.getElementById("weatherDescription");
+        const humidityEl = document.getElementById("humidity");
+        const windEl = document.getElementById("wind");
+        const feelsLikeEl = document.getElementById("feelsLike");
+        const pressureEl = document.getElementById("pressure");
+        const forecastContainer = document.getElementById("forecast");
+
+        // Weather icons mapping
+        const weatherIcons = {
+            "01d": "☀️", // clear sky day
+            "01n": "🌙", // clear sky night
+            "02d": "⛅", // few clouds day
+            "02n": "☁️", // few clouds night
+            "03d": "☁️", // scattered clouds
+            "03n": "☁️", // scattered clouds
+            "04d": "☁️", // broken clouds
+            "04n": "☁️", // broken clouds
+            "09d": "🌧️", // shower rain
+            "09n": "🌧️", // shower rain
+            "10d": "🌦️", // rain day
+            "10n": "🌧️", // rain night
+            "11d": "⛈️", // thunderstorm
+            "11n": "⛈️", // thunderstorm
+            "13d": "❄️", // snow
+            "13n": "❄️", // snow
+            "50d": "🌫️", // mist
+            "50n": "🌫️"  // mist
+        };
+
+        // Function to get weather icon
+        function getWeatherIcon(iconCode) {
+            return weatherIcons[iconCode] || "⛅";
+        }
+
+        // Function to get day name from date
+        function getDayName(dateStr) {
+            const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+            const date = new Date(dateStr);
+            return days[date.getDay()];
+        }
+
+        // Function to fetch weather data
+        async function fetchWeather(city) {
+            showLoading();
+
+            try {
+                // Fetch current weather
+                const weatherResponse = await fetch(`${API_URL}?q=${city}&appid=${API_KEY}&units=metric`);
+
+                if (!weatherResponse.ok) {
+                    throw new Error(`City not found or API error: ${weatherResponse.statusText}`);
+                }
+
+                const weatherData = await weatherResponse.json();
+
+                // Fetch forecast data
+                const forecastResponse = await fetch(`${FORECAST_API_URL}?q=${city}&appid=${API_KEY}&units=metric`);
+
+                if (!forecastResponse.ok) {
+                    throw new Error(`Forecast data not available: ${forecastResponse.statusText}`);
+                }
+
+                const forecastData = await forecastResponse.json();
+
+                // Update UI with weather data
+                updateWeatherUI(weatherData, forecastData);
+
+                hideLoading();
+                showWeather();
+                hideError();
+            } catch (error) {
+                hideLoading();
+                hideWeather();
+                showError(error.message);
+                console.error("Error fetching weather data:", error);
+            }
+        }
+
+        // Function to update weather UI
+        function updateWeatherUI(weatherData, forecastData) {
+            // Update current weather
+            temperatureEl.textContent = `${Math.round(weatherData.main.temp)}°C`;
+            weatherIconEl.textContent = getWeatherIcon(weatherData.weather[0].icon);
+            weatherDescriptionEl.textContent = `${weatherData.name}, ${weatherData.sys.country} - ${weatherData.weather[0].description}`;
+            humidityEl.textContent = `${weatherData.main.humidity}%`;
+            windEl.textContent = `${Math.round(weatherData.wind.speed * 3.6)} km/h`; // Convert m/s to km/h
+            feelsLikeEl.textContent = `${Math.round(weatherData.main.feels_like)}°C`;
+            pressureEl.textContent = `${weatherData.main.pressure} hPa`;
+
+            // Update forecast
+            forecastContainer.innerHTML = "";
+
+            // Get forecast for each day (at 12:00 PM)
+            const dailyForecasts = {};
+
+            forecastData.list.forEach(item => {
+                const date = item.dt_txt.split(" ")[0];
+                const time = item.dt_txt.split(" ")[1];
+
+                // Choose the forecast around noon for each day
+                if (time === "12:00:00" || !dailyForecasts[date]) {
+                    dailyForecasts[date] = item;
+                }
+            });
+
+            // Display the next 5 days forecast
+            Object.values(dailyForecasts).slice(0, 5).forEach(item => {
+                const forecastDate = item.dt_txt.split(" ")[0];
+                const dayName = getDayName(forecastDate);
+
+                const forecastItem = document.createElement("div");
+                forecastItem.className = "forecast-item";
+                forecastItem.innerHTML = `
+                    <div class="forecast-day">${dayName}</div>
+                    <div class="forecast-icon">${getWeatherIcon(item.weather[0].icon)}</div>
+                    <div class="forecast-temp">${Math.round(item.main.temp)}°C</div>
+                `;
+
+                forecastContainer.appendChild(forecastItem);
+            });
+        }
+
+        // UI helper functions
+        function showLoading() {
+            loadingContainer.style.display = "block";
+        }
+
+        function hideLoading() {
+            loadingContainer.style.display = "none";
+        }
+
+        function showWeather() {
+            weatherContainer.style.display = "block";
+        }
+
+        function hideWeather() {
+            weatherContainer.style.display = "none";
+        }
+
+        function showError(message) {
+            errorContainer.textContent = message;
+            errorContainer.style.display = "block";
+        }
+
+        function hideError() {
+            errorContainer.style.display = "none";
+        }
+
+        // Event listeners
+        searchBtn.addEventListener("click", () => {
+            const city = cityInput.value.trim();
+            if (city) {
+                fetchWeather(city);
+            } else {
+                showError("Please enter a city name");
+            }
+        });
+
+        cityInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                searchBtn.click();
+            }
+        });
+
+        // Initialize with default city
+        document.addEventListener("DOMContentLoaded", () => {
+            // Use user's location if available through Telegram WebApp
+            const userCity = "London"; // Default city
+            cityInput.value = userCity;
+            fetchWeather(userCity);
+        });
+    </script>
+</body>
+
+</html>
